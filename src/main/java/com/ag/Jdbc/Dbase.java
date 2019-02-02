@@ -1,20 +1,28 @@
 package com.ag.Jdbc;
 
-import dnl.utils.text.table.TextTable;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.sql.*;
+import java.util.Properties;
 import java.util.Scanner;
 
 public class Dbase {
-    static final String DB_URL = "jdbc:postgresql://127.0.0.1:5432/db3";
-    static final String USER = "postgres";
-    static final String PASS = "su";
+    private static String db_url;
+    private static String db_user;
+    private static String db_pass = "su";
     static final String BYE_SCANNER = "bye";
 
 
     public static void main(String[] args) throws SQLException {
+        try {
+            readProperties();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
         Connection connection =null;
-        connection = DriverManager.getConnection(DB_URL, USER, PASS);
+        connection = DriverManager.getConnection(db_url, db_user, db_pass);
         Statement statement = connection.createStatement();
         Scanner scanner = new Scanner(System.in);
         System.out.println("to Exit type \"bye\"");
@@ -23,21 +31,27 @@ public class Dbase {
             if (BYE_SCANNER.equalsIgnoreCase(line.trim())) {
                 break;
             }
-            QueryExecute query =allocate(line, statement);
+            QueryExecute query =new QueryExecute(statement,line);
             query.execute();
             query.display();
+            query.writeToHTML();
         }
         connection.close();
     }
+    private static void readProperties() throws IOException {
+        FileInputStream fileInputStream =null;
+        Properties property = new Properties();
 
-    private static QueryExecute  allocate (String line, Statement statement) throws SQLException {
-        if (Operations.SELECT.getName().equalsIgnoreCase(line.trim().split(" ")[0])) {
-            QuerySelect query = new QuerySelect(statement,line);
-            return query;
-        } else {
-            QueryExecute query = new QueryExecute(statement,line);
-            return query;
-
+        try {
+            fileInputStream = new FileInputStream("src/main/resources/config.properties");
+            property.load(fileInputStream);
+            db_url = property.getProperty("db.host");
+            db_user = property.getProperty("db.login");
+            db_pass = property.getProperty("db.password");
+        } catch (IOException e) {
+            System.err.println("config file not found");
+        } finally {
+            fileInputStream.close();
         }
     }
 }
